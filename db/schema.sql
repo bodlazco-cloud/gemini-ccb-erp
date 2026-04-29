@@ -153,3 +153,16 @@ CREATE TABLE mrr_logs (
     photo_evidence_url TEXT,
     received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE purchase_orders 
+ADD COLUMN audit_status TEXT DEFAULT 'PENDING_REVIEW',
+ADD COLUMN verified_at TIMESTAMP,
+ADD COLUMN verified_by UUID REFERENCES auth.users(id);
+
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    po_id UUID REFERENCES purchase_orders(id),
+    amount NUMERIC(15,2),
+    prepared_by UUID REFERENCES auth.users(id),
+    released_by UUID REFERENCES auth.users(id),
+    status TEXT DEFAULT 'DRAFT' -- DRAFT -> PREPARED -> RELEASED
+);
