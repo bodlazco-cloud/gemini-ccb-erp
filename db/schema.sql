@@ -132,3 +132,24 @@ CREATE INDEX idx_ledger_unit ON financial_ledger(unit_id);
 CREATE INDEX idx_ledger_dept ON financial_ledger(department);
 CREATE INDEX idx_units_project ON units(project_id);
 CREATE INDEX idx_progress_task ON daily_progress(task_assignment_id);
+-- Track Purchase Orders linked to Unit_ID
+CREATE TABLE purchase_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    po_number SERIAL UNIQUE,
+    unit_id TEXT REFERENCES units(id),
+    vendor_id UUID,
+    total_amount NUMERIC(15,2),
+    is_osm BOOLEAN DEFAULT FALSE, -- Flag for Finance Deductions
+    status TEXT DEFAULT 'PENDING_AUDIT',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Warehouse / Material Receiving Report (MRR)
+CREATE TABLE mrr_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    po_id UUID REFERENCES purchase_orders(id),
+    received_qty NUMERIC(12,2),
+    receiver_id UUID REFERENCES users(id),
+    photo_evidence_url TEXT,
+    received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
