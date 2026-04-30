@@ -107,3 +107,43 @@ export async function updateMilestoneProgress(data: {
   revalidatePath(`/construction/site/${data.site_id}`);
   return { success: true };
 }
+// actions/construction-actions.ts
+// ... keep your submitNTP function here ...
+
+/**
+ * UPDATED: Milestone Tagging with Internal Resource Triggers
+ * When a milestone is tagged, it potentially triggers Fleet & Batching needs.
+ */
+export async function updateMilestoneProgress(data: {
+  site_id: string;
+  unit_id: string;
+  activity_id: string;
+  progress_pct: number;
+  photo_proof_url: string;
+}) {
+  // 1. Update Unit Progress
+  const { error: updateError } = await supabase
+    .from('unit_milestones')
+    .update({ 
+      progress: data.progress_pct, 
+      evidence_url: data.photo_proof_url,
+      updated_at: new Date()
+    })
+    .match({ unit_id: data.unit_id, activity_id: data.activity_id });
+
+  if (updateError) throw new Error(updateError.message);
+
+  // 2. TRIGGER: Audit Queue for 100% completion
+  if (data.progress_pct === 100) {
+    await supabase.from('audit_verification_queue').insert({
+      type: 'MILESTONE_VERIFICATION',
+      site_id: data.site_id,
+      unit_id: data.unit_id,
+      activity_id: data.activity_id,
+      status: 'PENDING_AUDIT'
+    });
+  }
+
+  revalidatePath(`/construction/site/${data.site_id}`);
+  return { success: true };
+}
