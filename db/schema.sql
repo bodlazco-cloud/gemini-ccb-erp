@@ -193,3 +193,62 @@ CREATE TABLE material_logs (
     quantity NUMERIC(12,2),
     user_id UUID REFERENCES auth.users(id)
 );
+-- 1. MASTER BOM DIRECTORY (Admin-Write Only)
+CREATE TABLE master_bom (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    unit_model_id TEXT NOT NULL, -- e.g., 'Model-A-Beg'
+    item_id UUID REFERENCES inventory_items(id),
+    standard_qty DECIMAL NOT NULL,
+    uom TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. RESOURCE FORECASTING (Automated Trigger)
+-- When an NTP is issued, a function inserts rows here
+CREATE TABLE resource_forecasts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ntp_id UUID REFERENCES unit_tasks(id),
+    site_id TEXT NOT NULL,
+    unit_id TEXT NOT NULL,
+    item_id UUID REFERENCES inventory_items(id),
+    forecast_qty DECIMAL NOT NULL,
+    actual_issued_qty DECIMAL DEFAULT 0,
+    status TEXT DEFAULT 'PENDING_PR', -- Changes to 'PR_CREATED' then 'ISSUED'
+    CONSTRAINT qty_variance_check CHECK (actual_issued_qty <= forecast_qty * 1.10) -- Max 10% auto-variance
+);
+
+-- 3. ENABLE ADMIN SOVEREIGNTY VIA RLS
+ALTER TABLE master_bom ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Everyone can view the Master BOM
+CREATE POLICY "Allow public read access" ON master_bom
+    FOR SELECT USING (true);
+
+-- Policy: Only users with 'admin' role can insert/update/delete
+CREATE POLICY "Allow admin write access" ON master_bom
+    FOR ALL 
+    TO authenticated
+    USING (auth.jwt() ->> 'role' = 'admin')
+    WITH CHECK (auth.jwt() ->> 'role' = 'admin');
+
+-- 4. AUTOMATED FORECAST TRIGGER (The Engine)
+CREATE OR REPLACE FUNCTION trigger_resource_forecast()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO resource_forecasts (ntp_id, site_id, unit_id, item_id, forecast_qty)
+    SELECT 
+        NEW.id, 
+        NEW.site_id, 
+        NEW.unit_id, 
+        mb.item_id, 
+        mb.standard_qty
+    FROM master_bom mb
+    WHERE mb.unit_model_id = NEW.unit_model_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_ntp_issued
+AFTER INSERT ON unit_tasks
+FOR EACH ROW EXECUTE FUNCTION trigger_resource_forecast();
