@@ -252,3 +252,62 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER on_ntp_issued
 AFTER INSERT ON unit_tasks
 FOR EACH ROW EXECUTE FUNCTION trigger_resource_forecast();
+-- ==========================================
+-- 1. MASTER BOM (The "Golden Source")
+-- ==========================================
+CREATE TABLE master_bom (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    unit_model_id TEXT NOT NULL, -- e.g., 'CASA-MIRA-REG'
+    scope_of_work TEXT NOT NULL, -- e.g., 'Structural'
+    item_code TEXT NOT NULL,      -- e.g., 'CEMENT-40KG'
+    standard_qty DECIMAL(12,4) NOT NULL,
+    uom TEXT NOT NULL,
+    base_rate_php DECIMAL(12,2) NOT NULL, -- For internal job costing
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES auth.users(id)
+);
+
+-- PROTECT THE MASTER BOM (Admin-Write Only)
+ALTER TABLE master_bom ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admin Only Write" ON master_bom FOR ALL TO authenticated 
+USING (auth.jwt() ->> 'role' = 'admin');
+CREATE POLICY "Public Read" ON master_bom FOR SELECT TO authenticated USING (true);
+
+-- ==========================================
+-- 2. AUTOMATED RESOURCE FORECASTING
+-- ==========================================
+CREATE TABLE resource_forecasts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ntp_id UUID REFERENCES construction_ntps(id),
+    site_id TEXT NOT NULL,
+    unit_id TEXT NOT NULL,
+    item_code TEXT NOT NULL,
+    forecast_qty DECIMAL(12,4) NOT NULL,
+    status TEXT DEFAULT 'PENDING_PR', -- PENDING_PR -> PR_CREATED -> PO_ISSUED
+    last_updated TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==========================================
+-- 3. THE TRIGGER FUNCTION (The Automator)
+-- ==========================================
+-- This function runs every time an NTP is issued in the Construction module.
+CREATE OR REPLACE FUNCTION generate_unit_forecast()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO resource_forecasts (ntp_id, site_id, unit_id, item_code, forecast_qty)
+    SELECT 
+        NEW.id, 
+        NEW.site_id, 
+        NEW.unit_id, 
+        mb.item_code, 
+        mb.standard_qty
+    FROM master_bom mb
+    WHERE mb.unit_model_id = NEW.unit_model_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_forecast_on_ntp
+AFTER INSERT ON construction_ntps
+FOR EACH ROW EXECUTE FUNCTION generate_unit_forecast();
