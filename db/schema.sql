@@ -166,3 +166,11 @@ CREATE TABLE payments (
     released_by UUID REFERENCES auth.users(id),
     status TEXT DEFAULT 'DRAFT' -- DRAFT -> PREPARED -> RELEASED
 );
+-- db/schema_update.sql
+CREATE TABLE master_sow (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category TEXT, -- e.g., 'Structural', 'Architectural'
+    activity_name TEXT UNIQUE,
+    milestone_weight PERCENTAGE, -- For progress recognition
+    standard_manpower_requirement INTEGER
+);
