@@ -1,6 +1,23 @@
-.next/
-node_modules/
-.env
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js Build & Cache
+/.next/
+/out/
+/build
 *.log
-build/
-dist/
+
+# Environment & Secrets (CRITICAL for Supabase later)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Replit & System files
+.replit
+replit.nix
+.DS_Store
+.cache
