@@ -174,3 +174,22 @@ CREATE TABLE master_sow (
     milestone_weight PERCENTAGE, -- For progress recognition
     standard_manpower_requirement INTEGER
 );
+-- Tracks physical stock at each site before it is assigned to a specific house unit
+CREATE TABLE site_inventory (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id UUID REFERENCES sites(id),
+    material_id UUID REFERENCES master_materials(id),
+    physical_qty NUMERIC(12,2) DEFAULT 0,
+    reserved_qty NUMERIC(12,2) DEFAULT 0, -- Allocated to active NTPs but not yet picked up
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Material Movement Log (The Audit Trail)
+CREATE TABLE material_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT, -- 'RECEIPT', 'ISSUANCE', 'TRANSFER', 'ADJUSTMENT'
+    reference_id TEXT, -- PO_ID, NTP_ID, or Transfer_ID
+    material_id UUID REFERENCES master_materials(id),
+    quantity NUMERIC(12,2),
+    user_id UUID REFERENCES auth.users(id)
+);
