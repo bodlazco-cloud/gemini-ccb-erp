@@ -7,9 +7,9 @@ import {
   Wallet, 
   Activity 
 } from 'lucide-react';
-import KpiCard from '@/components/dashboard/KpiCard';
-import ProgressOverview from '@/components/dashboard/ProgressOverview';
-import CashFlowChart from '@/components/dashboard/CashFlowChart';
+import KpiCard from '../components/dashboard/kpicard';
+import ProgressOverview from '../components/dashboard/ProgressOverview';
+import CashFlowChart from '../components/dashboard/CashFlowChart';
 
 export default async function BodCockpit() {
   // In a real scenario, fetch your high-level aggregates here
