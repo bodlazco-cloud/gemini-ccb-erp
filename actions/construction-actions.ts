@@ -49,3 +49,61 @@ export async function submitNTP(formData: {
   revalidatePath('/construction/site/[id]');
   return { success: true, ntp_id };
 }
+// actions/construction-actions.ts
+'use server'
+
+import { supabase } from '@/lib/supabase';
+import { revalidatePath } from 'next/cache';
+
+// --- EXISTING: NTP TRIGGER LOGIC (KEEP THIS) ---
+export async function submitNTP(formData: { ... }) { 
+  // ... your existing code ...
+}
+
+// --- NEW: MILESTONE TAGGING LOGIC (APPEND THIS) ---
+/**
+ * Updates physical progress per unit. 
+ * If 100%, triggers the Sequential Lock for Audit Verification.
+ */
+export async function updateMilestoneProgress(data: {
+  unit_id: string;
+  sow_activity_id: string;
+  progress_pct: number;
+  photo_proof_url: string;
+  site_id: string; // Required for revalidation
+}) {
+  // 1. DATA INTEGRITY CHECK: Ensure progress doesn't exceed 100%
+  if (data.progress_pct > 100) throw new Error("Progress cannot exceed 100%");
+
+  // 2. UPDATE PROGRESS & ATTACH PROOF
+  const { error: updateError } = await supabase
+    .from('unit_milestones')
+    .update({ 
+      progress: data.progress_pct, 
+      evidence_url: data.photo_proof_url,
+      updated_at: new Date()
+    })
+    .match({ unit_id: data.unit_id, activity_id: data.sow_activity_id });
+
+  if (updateError) throw new Error(updateError.message);
+
+  // 3. SEQUENTIAL LOCK TRIGGER
+  // If progress is 100%, we move the task into the Audit Queue. 
+  // The subcon cannot bill until Audit verifies this entry.
+  if (data.progress_pct === 100) {
+    const { error: auditError } = await supabase
+      .from('audit_verification_queue')
+      .insert({
+        type: 'MILESTONE_VERIFICATION',
+        reference_id: data.unit_id,
+        activity_id: data.sow_activity_id,
+        status: 'PENDING_AUDIT',
+        created_at: new Date()
+      });
+      
+    if (auditError) console.error("Audit Queue Trigger Failed:", auditError.message);
+  }
+
+  revalidatePath(`/construction/site/${data.site_id}`);
+  return { success: true };
+}
