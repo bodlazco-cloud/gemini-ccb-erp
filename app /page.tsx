@@ -7,7 +7,7 @@ import {
   Wallet, 
   Activity 
 } from 'lucide-react';
-import KpiCard from '../components/dashboard/kpicard';
+import KpiCard from '../components/dashboard/KpiCard';
 import ProgressOverview from '../components/dashboard/ProgressOverview';
 import CashFlowChart from '../components/dashboard/CashFlowChart';
 
