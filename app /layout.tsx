@@ -2,104 +2,200 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, HardHat, ClipboardCheck, Truck, 
-  Factory, Construction, Wallet, Users, Settings, 
-  Bell, Menu, X, AlertTriangle, ChevronRight 
+  LayoutDashboard, HardHat, Construction, Truck, 
+  Factory, Settings, ShieldCheck, Wallet, 
+  Database, ShieldAlert, ChevronDown, ChevronRight,
+  Menu, X, Bell, Activity, Users
 } from 'lucide-react';
 import './globals.css';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch errors
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
-  const departments = [
-    { name: 'Planning & Engineering', icon: <HardHat size={20} />, path: '/planning', color: 'text-blue-600' },
-    { name: 'Audit & Quality', icon: <ClipboardCheck size={20} />, path: '/audit', color: 'text-purple-600' },
-    { name: 'Construction (Sites)', icon: <Construction size={20} />, path: '/construction', color: 'text-orange-600' },
-    { name: 'Procurement & Stock', icon: <Truck size={20} />, path: '/procurement', color: 'text-green-600' },
-    { name: 'Batching Plant', icon: <Factory size={20} />, path: '/batching', color: 'text-slate-600' },
-    { name: 'Motorpool', icon: <Settings size={20} />, path: '/motorpool', color: 'text-red-600' },
-    { name: 'Finance & Accounting', icon: <Wallet size={20} />, path: '/finance', color: 'text-emerald-600' },
-    { name: 'HR & Payroll', icon: <Users size={20} />, path: '/hr', color: 'text-indigo-600' },
+  const toggleMenu = (name: string) => {
+    setOpenMenus(prev => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const navigation = [
+    {
+      name: 'Planning & Engineering',
+      icon: <HardHat size={18} />,
+      color: 'text-blue-600',
+      path: '/planning',
+      subsections: [
+        { name: 'Overview', path: '/planning' },
+        { name: 'Bill of Materials', path: '/planning/bom' },
+        { name: 'Resource Mapping', path: '/planning/mapping' },
+        { name: 'MRP Queue', path: '/planning/mrp' },
+        { name: 'Batching Forecast', path: '/planning/batching-forecast' },
+        { name: 'Motorpool Needs', path: '/planning/fleet-needs' },
+        { name: 'Change Orders', path: '/planning/change-orders' },
+        { name: 'Budget vs Actual', path: '/planning/reports/bva' },
+        { name: 'Job Costing', path: '/planning/reports/job-costing' },
+      ]
+    },
+    {
+      name: 'Construction',
+      icon: <Construction size={18} />,
+      color: 'text-orange-600',
+      path: '/construction',
+      subsections: [
+        { name: 'Overview', path: '/construction' },
+        { name: 'Site Registry', path: '/construction/registry' },
+        { name: 'NTP Issuance', path: '/construction/ntp' },
+        { name: 'Daily Progress', path: '/construction/progress' },
+        { name: 'Manpower Logs', path: '/construction/manpower' },
+        { name: 'Site Profitability', path: '/construction/reports/profit' },
+      ]
+    },
+    {
+      name: 'Procurement & Stock',
+      icon: <Truck size={18} />,
+      color: 'text-green-600',
+      path: '/procurement',
+      subsections: [
+        { name: 'Overview', path: '/procurement' },
+        { name: 'PR/PO Management', path: '/procurement/orders' },
+        { name: 'Logistics (MRR)', path: '/procurement/logistics' },
+        { name: 'Inventory', path: '/procurement/inventory' },
+      ]
+    },
+    {
+      name: 'Finance & Accounting',
+      icon: <Wallet size={18} />,
+      color: 'text-emerald-600',
+      path: '/finance',
+      subsections: [
+        { name: 'Overview', path: '/finance' },
+        { name: 'Billing', path: '/finance/billing' },
+        { name: 'Payables', path: '/finance/payables' },
+        { name: 'Banking/Recon', path: '/finance/banking' },
+        { name: 'P&L (by Dept)', path: '/finance/reports/pnl' },
+        { name: 'Cash Flow Projections', path: '/finance/reports/cashflow' },
+      ]
+    },
+    {
+      name: 'Audit & Quality',
+      icon: <ShieldCheck size={18} />,
+      color: 'text-purple-600',
+      path: '/audit',
+      subsections: [
+        { name: 'PO Verification', path: '/audit/po' },
+        { name: 'Milestone Audit', path: '/audit/milestone' },
+        { name: 'Variance Audit', path: '/audit/variance' },
+        { name: 'QA Punch-lists', path: '/audit/qa' },
+      ]
+    }
   ];
 
-  if (!mounted) return null; // Avoids the "white screen" during hydration
+  const adminNav = [
+    { name: 'Master List', icon: <Database size={18} />, path: '/master-data', color: 'text-slate-500' },
+    { name: 'Admin Settings', icon: <Settings size={18} />, path: '/admin', color: 'text-red-500' }
+  ];
+
+  if (!mounted) return null;
 
   return (
     <html lang="en">
-      <body className="bg-slate-50">
-        <div className="min-h-screen flex flex-col font-sans text-slate-900">
-          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-50">
+      <body className="bg-slate-50 text-slate-900 antialiased">
+        <div className="min-h-screen flex flex-col">
+          {/* HEADER */}
+          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-50">
             <div className="flex items-center gap-4">
               <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                 {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
               <div className="flex flex-col">
-                <h1 className="font-bold text-xl tracking-tight text-slate-800">CASTCRETE <span className="text-blue-600">360</span></h1>
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-slate-400 -mt-1">Enterprise Resource Planning</span>
+                <h1 className="font-black text-xl tracking-tighter">CASTCRETE <span className="text-blue-600">360</span></h1>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest -mt-1">Enterprise Intelligence</p>
               </div>
             </div>
 
             <div className="flex items-center gap-6">
-              <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
-                <AlertTriangle size={14} className="text-amber-600" />
-                <span className="text-xs font-medium text-amber-800">System Status: 5M Buffer Secured</span>
+               <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
+                <Activity size={14} className="text-blue-600" />
+                <span className="text-[10px] font-bold text-blue-800 uppercase">System: Operational</span>
               </div>
-              <button className="relative p-2 text-slate-500 hover:text-blue-600 transition-colors">
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-              </button>
               <div className="flex items-center gap-3 border-l pl-6 border-slate-200">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold leading-none">BOD User</p>
-                  <p className="text-[10px] text-slate-500 uppercase mt-1">Administrator</p>
+                  <p className="text-xs font-black uppercase">Lesley Ventura</p>
+                  <p className="text-[10px] text-slate-400 font-bold">BOD LEAD</p>
                 </div>
-                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-200">AD</div>
+                <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white text-xs font-black">LV</div>
               </div>
             </div>
           </header>
 
           <div className="flex flex-1 overflow-hidden">
-            <aside className={`bg-white border-r border-slate-200 transition-all duration-300 ease-in-out z-40 ${isSidebarOpen ? 'w-72' : 'w-0 overflow-hidden'} lg:relative absolute inset-y-0`}>
-              <div className="p-4 flex flex-col h-full">
-                <nav className="flex-1 space-y-1">
-                  <div className="pb-4">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Main Dashboard</p>
-                    <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold">
-                      <LayoutDashboard size={20} />
-                      <span>BOD Cockpit</span>
-                      <ChevronRight size={14} className="ml-auto opacity-50" />
-                    </a>
+            {/* SIDEBAR */}
+            <aside className={`bg-white border-r border-slate-200 transition-all duration-300 shadow-sm ${isSidebarOpen ? 'w-72' : 'w-0 overflow-hidden'} flex flex-col`}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                
+                {/* COCKPIT */}
+                <a href="/" className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900 text-white shadow-lg mb-6 hover:scale-[1.02] transition-transform">
+                  <LayoutDashboard size={20} className="text-blue-400" />
+                  <span className="font-bold text-sm">BOD COCKPIT</span>
+                </a>
+
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Departments</p>
+                
+                {navigation.map((dept) => (
+                  <div key={dept.name} className="space-y-1">
+                    <button 
+                      onClick={() => toggleMenu(dept.name)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all hover:bg-slate-50 group ${openMenus[dept.name] ? 'bg-slate-50' : ''}`}
+                    >
+                      <span className={dept.color}>{dept.icon}</span>
+                      <span className="text-[13px] font-bold text-slate-700">{dept.name}</span>
+                      {openMenus[dept.name] ? <ChevronDown size={14} className="ml-auto opacity-40" /> : <ChevronRight size={14} className="ml-auto opacity-40" />}
+                    </button>
+                    
+                    {openMenus[dept.name] && (
+                      <div className="ml-9 border-l-2 border-slate-100 pl-4 space-y-1 mb-2 animate-in slide-in-from-left-2 duration-200">
+                        {dept.subsections.map(sub => (
+                          <a key={sub.name} href={sub.path} className="block py-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors">
+                            {sub.name}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 pt-2">Departments</p>
-                  {departments.map((dept) => (
-                    <a key={dept.name} href={dept.path} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 group">
-                      <span className={`transition-colors group-hover:${dept.color}`}>{dept.icon}</span>
-                      <span className="text-sm font-medium">{dept.name}</span>
-                    </a>
-                  ))}
-                </nav>
-                <div className="pt-6 border-t border-slate-100">
-                  <div className="bg-slate-900 rounded-2xl p-4 text-white">
-                    <p className="text-xs opacity-60">Production Target</p>
-                    <div className="flex justify-between items-end mt-1 mb-2">
-                      <span className="text-xl font-bold">84 / 120</span>
-                      <span className="text-[10px] font-bold text-blue-400">70%</span>
-                    </div>
-                    <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-blue-500 h-full w-[70%]"></div>
-                    </div>
+                ))}
+
+                <div className="pt-6 mt-6 border-t border-slate-100 space-y-1">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">System Control</p>
+                   {adminNav.map(item => (
+                     <a key={item.name} href={item.path} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
+                       <span className={item.color}>{item.icon}</span>
+                       <span className="text-[13px] font-bold">{item.name}</span>
+                     </a>
+                   ))}
+                </div>
+              </div>
+
+              {/* SIDEBAR FOOTER: TURNOVER TRACKER */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black text-slate-400">PROJECT TURNOVER</span>
+                    <span className="text-[10px] font-black text-blue-600 tracking-tighter">TARGET: 120/MO</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600 w-[70%]" />
                   </div>
                 </div>
               </div>
             </aside>
-            <main className="flex-1 overflow-y-auto p-4 md:p-8">
-              <div className="max-w-7xl mx-auto">{children}</div>
+
+            {/* MAIN CONTENT */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-10">
+              <div className="max-w-[1400px] mx-auto">
+                {children}
+              </div>
             </main>
           </div>
         </div>
